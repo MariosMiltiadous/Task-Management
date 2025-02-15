@@ -15,14 +15,21 @@ namespace TaskManagement.Api.Services
 
         public async Task<List<TaskModel>> GetAllTasksAsync()
         {
+            var now = DateTime.UtcNow;
+
             return await _context.Tasks
-                        .OrderBy(t =>
-                            t.DueDate <= DateTime.UtcNow.AddDays(1) ? 0 :  // Urgent (0)
-                            t.DueDate <= DateTime.UtcNow.AddDays(3) ? 1 :  // Normal (1)
-                            2 // Low Priority (2)
-                        )
-                        .ThenBy(t => t.DueDate) // Sort by DueDate within each category
-                        .ToListAsync();
+                .Select(t => new
+                {
+                    Task = t,
+                    Priority = t.DueDate <= now.AddDays(1) ? TaskPriority.Urgent :  // Due within 24h
+                               (t.DueDate > now.AddDays(1) && t.DueDate <= now.AddDays(3)) ? TaskPriority.Normal :  // Due in 2-3 days
+                               TaskPriority.Low // Due after 3 days
+                })
+                .OrderByDescending(t => t.Priority)  // Urgent (2) → Normal (1) → Low (0)
+                .ThenBy(t => t.Task.DueDate) // Sort by DueDate within each priority
+                .Select(t => t.Task) // Return only TasModel objects
+                .ToListAsync();
+
         }
 
         public async Task<TaskModel?> GetTaskByIdAsync(int id)
