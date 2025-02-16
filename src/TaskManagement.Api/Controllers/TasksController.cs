@@ -69,8 +69,13 @@ namespace TaskManagement.Api.Controllers
                 return BadRequest(new { message = "Invalid status or priority." });
             }
 
-            var result = await _taskService.UpdateTaskAsync(updatedTask);
-            return result ? NoContent() : NotFound();
+            var (success, message) = await _taskService.UpdateTaskAsync(updatedTask);
+
+            if (!success)
+            {
+                return BadRequest(new { message });
+            }
+            return NoContent();
         }
 
         // PUT /tasks → Update multiple tasks to a predefined status in a single bulk operation

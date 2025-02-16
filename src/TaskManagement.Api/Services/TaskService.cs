@@ -45,8 +45,8 @@ namespace TaskManagement.Api.Services
             return task;
         }
 
-        // Manybe I need to pass int id ??? TODO
-        public async Task<bool> UpdateTaskAsync(TaskModel task)
+        // update ths method to return meaningful messages
+        public async Task<(bool Success, string Message)> UpdateTaskAsync(TaskModel task)
         {
             try
             {
@@ -54,40 +54,38 @@ namespace TaskManagement.Api.Services
                 var existingTask = await _context.Tasks.FindAsync(task.Id);
                 if (existingTask == null)
                 {
-                    return false; // Task not found
+                    return (false, $"Task with ID {task.Id} not found.");
                 }
 
                 // --- Rules ---
 
-                // Rule 3: If the task is already marked as "Completed", skip updating its status
+                // Rule 3: If the task is already marked as "Completed", prevent updating its status
                 if (existingTask.Status == Models.TaskStatus.Completed)
                 {
-                    // Do not allow changing the status of a task that is already marked as "Completed"
-                    task.Status = existingTask.Status; // Keep the status as it is
-                    throw new Exception($"Task with ID {task.Id} is already marked as 'Completed'. Status cannot be changed.");
+                    return (false, $"Task with ID {task.Id} is already marked as 'Completed'. Status cannot be changed.");
                 }
-                else
+                // Rule 1: If setting to "Completed" but due more than 3 days ahead, prevent update
+                if (task.Status == Models.TaskStatus.Completed && task.DueDate > currentDate.AddDays(3))
                 {
-                    // Rule 1: If the task is being set to "Completed" and it's due more than 3 days ahead, skip updating
-                    if (task.Status == Models.TaskStatus.Completed && task.DueDate > currentDate.AddDays(3))
-                    {
-                        task.Status = existingTask.Status;
-                        // Task cannot be marked "Completed" if it's due more than 3 days ahead
-                        throw new Exception($"Task with ID {task.Id} cannot be marked as 'Completed' because it is due more than 3 days ahead.");
-                    }
-
-                    // Rule 2: If the task is overdue (due date is in the past), set its status to "Urgent"
-                    if (task.DueDate < currentDate && task.Status != Models.TaskStatus.Completed)
-                    {
-                        // Automatically mark overdue tasks as "Urgent"
-                        task.Priority = TaskPriority.Urgent;
-                        // Inform the user that the task is now urgent
-                        throw new Exception($"Task with ID {task.Id} is overdue and has been automatically marked as 'Urgent'.");
-                    }
+                    return (false, $"Task with ID {task.Id} cannot be marked as 'Completed' because it is due more than 3 days ahead.");
                 }
 
-                _context.Tasks.Update(task);
-                return await _context.SaveChangesAsync() > 0;
+                // Apply updates to allowed fields
+                existingTask.Title = task.Title;
+                existingTask.Description = task.Description;
+                existingTask.DueDate = task.DueDate;
+                existingTask.Priority = task.Priority;
+                existingTask.Status = task.Status;
+                existingTask.UpdatedAt = currentDate;
+                // Rule 2: If overdue (past due date) and not completed, set to "Urgent"
+                if (existingTask.DueDate < currentDate && existingTask.Status != Models.TaskStatus.Completed)
+                {
+                    existingTask.Priority = TaskPriority.Urgent;
+                }
+               
+
+                await _context.SaveChangesAsync();
+                return (true, $"Task with ID {task.Id} updated successfully.");
             }
             catch (Exception ex)
             {
