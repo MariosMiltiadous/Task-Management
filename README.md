@@ -13,17 +13,17 @@ Then type in cmd on your folder path: git clone <your-repository-url>
 cd TaskManagement
 
 ### Step 2) Install Required Dependencies for Api project
-# Entity Framework Core (SQLite) -- or from Nuget Package Manager
+## Entity Framework Core (SQLite) -- or from Nuget Package Manager
 dotnet add package Microsoft.EntityFrameworkCore.Sqlite
 dotnet add package Microsoft.EntityFrameworkCore.Design
 
-# Caching
+## Caching
 dotnet add package Microsoft.Extensions.Caching.Memory
 
-# JSON Handling
+## JSON Handling
 dotnet add package Microsoft.AspNetCore.Mvc.NewtonsoftJson
 
-# API Documentation
+## API Documentation
 dotnet add package Swashbuckle.AspNetCore
 
 ### Step 3) Install Required Test Dependencies
