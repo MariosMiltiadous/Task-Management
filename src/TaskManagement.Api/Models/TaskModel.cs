@@ -1,10 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TaskManagement.Api.Models
 {
     public class TaskModel
     {
         [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)] // Auto-increment ID
         public int Id { get; set; }
 
         [Required]
