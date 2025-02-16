@@ -77,17 +77,18 @@ namespace TaskManagement.Api.Services
 
                 // --- Rules ---
 
-                // Rule 3: If the task is already marked as "Completed", prevent updating its status
-                if (existingTask.Status == Models.TaskStatus.Completed)
-                {
-                    return (false, $"Task with ID {task.Id} is already marked as 'Completed'. Status cannot be changed.");
-                }
                 // Rule 1: If setting to "Completed" but due more than 3 days ahead, prevent update
                 if (task.Status == Models.TaskStatus.Completed && task.DueDate > currentDate.AddDays(3))
                 {
                     return (false, $"Task with ID {task.Id} cannot be marked as 'Completed' because it is due more than 3 days ahead.");
                 }
 
+                // Rule 3: If the task is already marked as "Completed", prevent updating its status
+                if (existingTask.Status == Models.TaskStatus.Completed)
+                {
+                    return (false, $"Task with ID {task.Id} is already marked as 'Completed'. Status cannot be changed.");
+                }
+              
                 // Apply updates to allowed fields
                 existingTask.Title = task.Title;
                 existingTask.Description = task.Description;
