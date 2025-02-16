@@ -28,7 +28,7 @@ namespace TaskManagement.Api.Controllers
         public async Task<IActionResult> GetTask(int id)
         {
             var task = await _taskService.GetTaskByIdAsync(id);
-            return task == null ? NotFound() : Ok(task);
+            return task == null ? NotFound(new { message = "Task not found." }) : Ok(task);
         }
 
         // POST /tasks → Create a new task

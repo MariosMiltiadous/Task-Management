@@ -17,6 +17,8 @@ builder.Services.AddMemoryCache();
 
 // Register TaskService in DI container
 builder.Services.AddScoped<ITaskService, TaskService>();
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
 
 var app = builder.Build();
 

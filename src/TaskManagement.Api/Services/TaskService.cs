@@ -8,10 +8,12 @@ namespace TaskManagement.Api.Services
     public class TaskService : ITaskService
     {
         private readonly ApplicationDbContext _context;
+        private readonly ICacheService _cacheService;
 
-        public TaskService(ApplicationDbContext context)
+        public TaskService(ApplicationDbContext context, ICacheService cacheService)
         {
             _context = context;
+            _cacheService = cacheService;
         }
 
         public async Task<List<TaskModel>> GetAllTasksAsync()
@@ -35,7 +37,23 @@ namespace TaskManagement.Api.Services
 
         public async Task<TaskModel?> GetTaskByIdAsync(int id)
         {
-            return await _context.Tasks.FindAsync(id);
+            string cacheKey = $"task_{id}";
+            // Check if the task is in cache
+            var cachedTask = await _cacheService.GetAsync<TaskModel>(cacheKey);
+            if (cachedTask != null)
+            {
+                return cachedTask; // Return cached task
+            }
+
+            // Fetch task from database if not in cache
+            var task = await _context.Tasks.FindAsync(id);
+            if (task != null)
+            {
+                // Store in cache with a 5-minute expiration
+                await _cacheService.SetAsync(cacheKey, task, TimeSpan.FromMinutes(5));
+            }
+
+            return task;
         }
 
         public async Task<TaskModel> CreateTaskAsync(TaskModel task)
@@ -82,10 +100,20 @@ namespace TaskManagement.Api.Services
                 {
                     existingTask.Priority = TaskPriority.Urgent;
                 }
-               
 
-                await _context.SaveChangesAsync();
-                return (true, $"Task with ID {task.Id} updated successfully.");
+                var saved = await _context.SaveChangesAsync() > 0;
+                if (saved)
+                {
+                    // Invalidate cache after updating
+                    await _cacheService.RemoveAsync($"task_{task.Id}");
+                    return (true, $"Task with ID {task.Id} updated successfully.");
+                }
+
+                return (false, "No changes were made to the task.");
+            }
+            catch (DbUpdateException dbEx)
+            {
+                return (false, $"Database error while updating task: {dbEx.Message}");
             }
             catch (Exception ex)
             {
@@ -145,7 +173,15 @@ namespace TaskManagement.Api.Services
             if (task == null) return false;
 
             _context.Tasks.Remove(task);
-            return await _context.SaveChangesAsync() > 0;
+            var deleted = await _context.SaveChangesAsync() > 0;
+
+            if (deleted)
+            {
+                // Invalidate cache when deleting a task
+                await _cacheService.RemoveAsync($"task_{id}");
+            }
+
+            return deleted;
         }
     }
 }
